@@ -183,7 +183,6 @@ while True:
             a = 1 # só pq o python reclama se o if estiver vazio
         else: 
             cartaJogada = jogadorDaVez.mao.removeDaMao(escolha-1)
-            print(cartaJogada)
             cartasDaRodada.append({
                 "jogador": jogadorDaVez,
                 "carta": cartaJogada
