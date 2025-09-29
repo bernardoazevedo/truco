@@ -4,15 +4,15 @@ import time
 
 class Naipe:
     def __init__(self, nome, simbolo):
-        self.nome = nome
+        self.nome    = nome
         self.simbolo = simbolo
 
 
 class Carta:
     def __init__(self, numero, naipe, peso):
         self.numero = numero
-        self.naipe = naipe
-        self.peso = peso
+        self.naipe  = naipe
+        self.peso   = peso
 
     def __str__(self):
         return f"[{self.numero}{self.naipe.simbolo}]"
@@ -82,7 +82,7 @@ class Mao:
         mensagemOpcoes = ""
         opcoes = []
         for i in range (1, len(self.cartas)+1):
-            opcao = i
+            opcao           = i
             mensagemOpcoes += f" {opcao}   "
             opcoes.append(opcao)
         opcao = 4
@@ -98,24 +98,25 @@ class Mao:
 class Jogador:
     def __init__(self, nome, mao):
         self.nome = nome
-        self.mao = mao
+        self.mao  = mao
 
     def __str__(self):
         return f"{self.nome}: " + self.mao.__str__() + "\n"
 
 
 class Dupla:
-    def __init__(self, jogadores, pontos):
-        self.jogadores = jogadores
-        self.pontos = pontos
+    def __init__(self, jogadores, pontos, rodadas):
+        self.jogadores   = jogadores
+        self.pontos      = pontos
+        self.rodadas     = rodadas
+        self.nomeDaDupla = f"{jogadores[0].nome} e {jogadores[1].nome}" 
 
     def __str__(self):
-        duplaString = ""
-        for jogador in self.jogadores:
-            duplaString += jogador.__str__()
-            duplaString += "pontos: " + str(self.pontos) + "\n"
+        duplaString  = "dupla: "   + self.nomeDaDupla  + "\n"
+        duplaString += "pontos: "  + str(self.pontos)  + "\n"
+        duplaString += "rodadas: " + str(self.rodadas) + "\n"
         return duplaString
-
+        
 
 
 
@@ -136,83 +137,126 @@ jogadores = [
     Jogador("bern", baralho.sorteaUmaMao()),
 ]
 
-dupla1 = Dupla([jogadores[0], jogadores[2]], 0)
-dupla2 = Dupla([jogadores[1], jogadores[3]], 0)
+duplas = [
+    Dupla([jogadores[0], jogadores[2]], 0, 0),
+    Dupla([jogadores[1], jogadores[3]], 0, 0)
+]
 
 filaDeJogadores = []
-filaDeJogadores.append(dupla1.jogadores[0])
-filaDeJogadores.append(dupla2.jogadores[0])
-filaDeJogadores.append(dupla1.jogadores[1])
-filaDeJogadores.append(dupla2.jogadores[1])
+filaDeJogadores.append(duplas[0].jogadores[0])
+filaDeJogadores.append(duplas[1].jogadores[0])
+filaDeJogadores.append(duplas[0].jogadores[1])
+filaDeJogadores.append(duplas[1].jogadores[1])
 
 
 # loop para cada partida, roda pela ordem dos jogadores
-i = 0
-rodadas = 1
-cartasDaRodada = []
-while True:
-    jogadorDaVez = filaDeJogadores[i]
+# uma mão só acaba quando todos os jogadores jogarem todas as suas cartas
+# uma rodada acaba quando chegamos ao fim da fila de jogadores
+# cada mão possui 3 rodadas
+i              = 0
+cartasDaMao    = [] 
+cartasDaRodada = [] 
+numeroDaMao    = 1
 
-    # os.system("clear")
-    print(f"rodada {rodadas}\n")
-
-    if len(cartasDaRodada) > 0:
-        for carta in cartasDaRodada:
-            print(f"{carta["jogador"].nome}: {carta["carta"].__str__()}")
-
-    print("\n" + jogadorDaVez.nome)
-    
-    opcaoErrada = True # só pra entrar no while. é gambiarra... eu sei
-    while opcaoErrada:
-        opcaoErrada = False
-        opcoes = jogadorDaVez.mao.printaCartasEOpcoes()
-        escolha = input("qual carta vai jogar? ").strip()
-        if escolha == "": 
-            escolha = 0
-        else:
-            escolha = int(escolha)
-
-        # vericia se a resposta e válida
-        if escolha not in opcoes:
-            opcaoErrada = True
-            print(f"\nops... você tem as seguintes opções: ")
-            continue
-
-        if escolha == 4: # truco ladrao
-            # regra do truco aqui
-            a = 1 # só pq o python reclama se o if estiver vazio
-        else: 
-            cartaJogada = jogadorDaVez.mao.removeDaMao(escolha-1)
-            cartasDaRodada.append({
-                "jogador": jogadorDaVez,
-                "carta": cartaJogada
-            })
-
-    i += 1
-    if i == 4: # todos já jogaram, rodada acabou
+while True: # loop de mãos
+    # loop de rodadas
+    numeroDaRodada = 1
+    while numeroDaRodada <= 3: 
         os.system("clear")
-        # cálculos pra definir a dupla vencedora
+        print(duplas[0])
+        print(duplas[1])
+        valorDaRodada = 2 # valor padrão
+        jogadorDaVez  = filaDeJogadores[i]
 
-        # iniciamos com a primeira e vamos comparar com as outras
-        cartaMaisForte = cartasDaRodada[0]
-        for cadaCarta in cartasDaRodada:
-            if cadaCarta["carta"].peso >= cartaMaisForte["carta"].peso:
-                cartaMaisForte = cadaCarta
+        print(f"mao {numeroDaMao}")
+        print(f"rodada {numeroDaRodada}\n")
 
-        print("\n\ne quem levou a rodada foi...")
-        print(cartaMaisForte["jogador"].nome)
-        print(cartaMaisForte["carta"])
-        time.sleep(2)
+        if len(cartasDaRodada) > 0:
+            for carta in cartasDaRodada:
+                print(f"{carta["jogador"].nome}: {carta["carta"].__str__()}")
 
-        # resetando os contadores
-        cartasDaRodada = []
-        rodadas += 1
-        i = 0
+        print("\n" + jogadorDaVez.nome)
+        
+        opcaoErrada = True # só pra entrar no while. é gambiarra... eu sei
+        while opcaoErrada:
+            opcaoErrada = False
+            opcoes      = jogadorDaVez.mao.printaCartasEOpcoes()
+            escolha     = input("qual carta vai jogar? ").strip()
+            if escolha == "": 
+                escolha = 0
+            else:
+                escolha = int(escolha)
 
-        # embaralhando e distribuindo as cartas 
-        # os.system("clear")
-        # print("\n\nembaralhando e distribuindo as cartas...")
-        # baralho.criaBaralho()
-        # for jogador in filaDeJogadores:
-        #     jogador.mao = baralho.sorteaUmaMao()
-        # time.sleep(3)
+            # verifica se a resposta é válida
+            if escolha not in opcoes:
+                opcaoErrada = True
+                print(f"\nops... você tem as seguintes opções: ")
+                continue
+
+            if escolha == 4: # truco ladrao
+                # regra do truco aqui
+                a = 1 # só pq o python reclama se o if estiver vazio
+            else: 
+                cartaJogada = jogadorDaVez.mao.removeDaMao(escolha-1)
+                cartasDaRodada.append({
+                    "jogador": jogadorDaVez,
+                    "carta":   cartaJogada
+                })
+
+        i += 1
+        if i == len(filaDeJogadores): # todos já jogaram, rodada acabou
+            os.system("clear")
+            # cálculos pra definir a dupla vencedora
+
+            # iniciamos com a primeira e vamos comparar com as outras
+            cartaMaisForte = cartasDaRodada[0]
+            for cadaCarta in cartasDaRodada:
+                if cadaCarta["carta"].peso >= cartaMaisForte["carta"].peso:
+                    cartaMaisForte = cadaCarta
+
+            vencedorRodada = cartaMaisForte["jogador"]
+
+            # procuro a dupla do jogador vencedor
+            for dupla in duplas:
+                for jogador in dupla.jogadores:
+                    if jogador.nome == vencedorRodada.nome:
+                        # incrementando as vitorias na mão
+                        dupla.rodadas += 1
+
+            print("\n\ne quem levou a rodada foi...")
+            print(cartaMaisForte["jogador"].nome)
+            print(cartaMaisForte["carta"])
+            time.sleep(1)
+
+            # resetando os contadores
+            for cartaJogada in cartasDaRodada:
+                cartasDaMao.append(cartaJogada)
+            cartasDaRodada = []
+            numeroDaRodada += 1
+            i = 0
+
+    # a mão acabou
+    os.system("clear")
+    numeroDaMao += 1
+
+    duplaVencedora = duplas[0] # só pra iniciar
+    for dupla in duplas: 
+        if dupla.rodadas > duplaVencedora.rodadas:
+            duplaVencedora = dupla
+
+    print("dupla vencedora:")
+    print(duplaVencedora)
+    duplaVencedora.pontos += valorDaRodada
+
+    for dupla in duplas: 
+        for jogador in dupla.jogadores:
+            if jogador.nome == vencedorRodada.nome:
+                # resetando contador de rodadas
+                dupla.rodadas = 0
+
+    # embaralhando e distribuindo as cartas 
+    print("\n\nembaralhando e distribuindo as cartas...")
+    baralho.criaBaralho()
+    for jogador in filaDeJogadores:
+        jogador.mao = baralho.sorteaUmaMao()
+    time.sleep(3)
