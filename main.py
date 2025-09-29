@@ -157,8 +157,9 @@ i              = 0
 cartasDaMao    = [] 
 cartasDaRodada = [] 
 numeroDaMao    = 1
+duplaVencedora = 0
 
-while True: # loop de mãos
+while not duplaVencedora: # loop de mãos
     # loop de rodadas
     numeroDaRodada = 1
     while numeroDaRodada <= 3: 
@@ -231,7 +232,7 @@ while True: # loop de mãos
             # resetando os contadores
             for cartaJogada in cartasDaRodada:
                 cartasDaMao.append(cartaJogada)
-            cartasDaRodada = []
+            cartasDaRodada  = []
             numeroDaRodada += 1
             i = 0
 
@@ -239,24 +240,37 @@ while True: # loop de mãos
     os.system("clear")
     numeroDaMao += 1
 
-    duplaVencedora = duplas[0] # só pra iniciar
+    # procurando a dupla vencedora
+    duplaVencedoraMao = duplas[0] # só pra iniciar
     for dupla in duplas: 
-        if dupla.rodadas > duplaVencedora.rodadas:
-            duplaVencedora = dupla
+        if dupla.rodadas > duplaVencedoraMao.rodadas:
+            duplaVencedoraMao = dupla
 
+    duplaVencedoraMao.pontos += valorDaRodada
     print("dupla vencedora:")
-    print(duplaVencedora)
-    duplaVencedora.pontos += valorDaRodada
+    print(duplaVencedoraMao)
 
+    # resetando contador de rodadas
     for dupla in duplas: 
-        for jogador in dupla.jogadores:
-            if jogador.nome == vencedorRodada.nome:
-                # resetando contador de rodadas
-                dupla.rodadas = 0
+        dupla.rodadas = 0
 
-    # embaralhando e distribuindo as cartas 
-    print("\n\nembaralhando e distribuindo as cartas...")
-    baralho.criaBaralho()
-    for jogador in filaDeJogadores:
-        jogador.mao = baralho.sorteaUmaMao()
-    time.sleep(3)
+    # verificando se alguma dupla já completou 12 pontos e ganhou
+    for dupla in duplas:
+        if dupla.pontos >= 12:
+            duplaVencedora = dupla
+    
+    if not duplaVencedora:
+        # embaralhando e distribuindo as cartas 
+        print("\n\nembaralhando e distribuindo as cartas...")
+        baralho.criaBaralho()
+        for jogador in filaDeJogadores:
+            jogador.mao = baralho.sorteaUmaMao()
+        time.sleep(3)
+
+os.system("clear")
+print("e a dupla vencedora foi...")
+time.sleep(1)
+print(duplaVencedora.nomeDaDupla)
+print(f"com {duplaVencedora.pontos} pontos!")
+
+time.sleep(10)
