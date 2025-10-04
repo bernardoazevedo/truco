@@ -1,6 +1,9 @@
 import random
 import os
 import time
+import numpy as np
+
+VELOCIDADE_DO_JOGO = 1
 
 class Naipe:
     def __init__(self, nome, simbolo):
@@ -17,6 +20,13 @@ class Carta:
     def __str__(self):
         return f"[{self.numero}{self.naipe.simbolo}]"
 
+class CartaSoftmax:
+    def __init__(self, carta, pesoSoftmax):
+        self.carta       = carta
+        self.pesoSoftmax = pesoSoftmax
+    
+    def __str__(self):
+        return f"{self.carta.__str__()} = {self.pesoSoftmax}"
 
 class Baralho:
     cartas = []
@@ -131,17 +141,21 @@ class Jogador:
 
     # aqui faço a lógica de qual carta jogar
     def decideQualCartaJogar(self):
-        # por enquanto, só jogo a mais forte
-        maiorCartaDaMao   = Carta("4", Naipe("ouros", "\U00002666"), 1)
-        i                 = 0
+        cartasSoftmax   = softmaxCartas(self.mao.cartas)
+        maiorCartaDaMao = CartaSoftmax(
+            Carta("4", Naipe("ouros", "\U00002666"), 1),
+            0 
+        )
+        i = 0
         posicaoMaiorCarta = i
-        for carta in self.mao.cartas:
-            i += 1
-            if carta.peso >= maiorCartaDaMao.peso:
-                maiorCartaDaMao   = carta
+        for cartaSoftmax in cartasSoftmax:
+            i += 1 # itero antes, pois as opções começam com 1
+            if cartaSoftmax.carta.peso >= maiorCartaDaMao.carta.peso:
+                maiorCartaDaMao   = cartaSoftmax
                 posicaoMaiorCarta = i
         return posicaoMaiorCarta
     
+
     # aqui é a decisão de aceitar ou não o truco
     def decideSeAceitaTruco(self, valorDaRodada):
         # por enquanto, aceito o truco se minha maior carta tiver peso maior ou igual a 9
@@ -187,6 +201,32 @@ def buscaProximoJogadorDaFila(jogadorAtual, filaDeJogadores):
         i += 1
     return proximoJogador
 
+# recebe um array de cartas e retorna o array com o valor de cada uma
+def softmaxCartas(cartas):
+    
+    arrayPesos = []
+    # gerando um array somente com os pesos
+    for carta in cartas:
+        arrayPesos.append(carta.peso)
+
+    pesosSoftmax = softmax(arrayPesos)
+
+    # gerando um novo array com as cartas e seus valores calculados 
+    cartasSoftmax = []
+    i = 0
+    for carta in cartas:
+        cartasSoftmax.append(
+            CartaSoftmax(
+                carta,
+                pesosSoftmax[i]
+            )
+        )
+        i += 1
+    return cartasSoftmax
+
+def softmax(x):
+    return np.exp(x) / np.sum(np.exp(x), axis=0)
+
 
 ### Inicia programa
 naipes = []
@@ -200,8 +240,8 @@ baralho.criaBaralho()
 
 jogadores = [
     #        nome       mao do jogador      npc?   podeTrucar?
-    Jogador("gore", baralho.sorteaUmaMao(), False, True),
-    Jogador("luan", baralho.sorteaUmaMao(), False, True),
+    Jogador("gore", baralho.sorteaUmaMao(), True, True),
+    Jogador("luan", baralho.sorteaUmaMao(), True, True),
     Jogador("joao", baralho.sorteaUmaMao(), True,  True),
     Jogador("bern", baralho.sorteaUmaMao(), True,  True),
 ]
@@ -266,7 +306,7 @@ while not duplaVencedora: # loop de mãos
                 opcoes = jogadorDaVez.mao.printaCartas(jogadorDaVez.podeTrucar)
                 print("decidindo qual carta jogar... [computador]")
                 escolha = jogadorDaVez.decideQualCartaJogar()
-                time.sleep(2)
+                time.sleep(2 / VELOCIDADE_DO_JOGO)
             else:
                 opcoes  = jogadorDaVez.mao.printaCartasEOpcoes(jogadorDaVez.podeTrucar)
                 escolha = input("qual carta vai jogar? ").strip()
@@ -294,7 +334,7 @@ while not duplaVencedora: # loop de mãos
                     if proximoJogador.npc:
                         print(f"{proximoJogador.nome} está decidindo se aceita ou não... [computador]")
                         respostaTruco = proximoJogador.decideSeAceitaTruco(valorDaRodada + 2 + 2)
-                        time.sleep(2)
+                        time.sleep(2 / VELOCIDADE_DO_JOGO)
                     else:
                         print(f"\n{proximoJogador.nome}, você aceita?")
                         print(f"[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
@@ -307,19 +347,19 @@ while not duplaVencedora: # loop de mãos
                         rodadaTrucada  = True
                         valorDaRodada += 2
                         print(f"{proximoJogador.nome} aceitou! A rodada agora vale {valorDaRodada} pontos!")
-                        time.sleep(2)
+                        time.sleep(2 / VELOCIDADE_DO_JOGO)
 
                     elif respostaTruco == 2:
                         correuDoTruco = True
                         vencedorTruco = quemPediuTruco
                         print(f"{proximoJogador.nome} correu... A dupla de {quemPediuTruco.nome} ganhou {valorDaRodada} pontos!")
-                        time.sleep(2)
+                        time.sleep(2 / VELOCIDADE_DO_JOGO)
 
                     elif respostaTruco == 3:
                         valorDaRodada += 2
                         quemPediuTruco = proximoJogador
                         print(f"\n{quemPediuTruco.nome} aumentou!")
-                        time.sleep(2)
+                        time.sleep(2 / VELOCIDADE_DO_JOGO)
 
                     else: 
                         print("Opção inválida... Tente novamente")
@@ -366,7 +406,7 @@ while not duplaVencedora: # loop de mãos
             print("\n\ne quem levou a rodada foi...")
             print(cartaMaisForte["jogador"].nome)
             print(cartaMaisForte["carta"])
-            time.sleep(3)
+            time.sleep(3 / VELOCIDADE_DO_JOGO)
 
             # resetando os contadores
             for cartaJogada in cartasDaRodada:
@@ -405,7 +445,7 @@ while not duplaVencedora: # loop de mãos
         for jogador in filaDeJogadores:
             jogador.mao        = baralho.sorteaUmaMao()
             jogador.podeTrucar = True
-        time.sleep(3)
+        time.sleep(3 / VELOCIDADE_DO_JOGO)
 
     # aqui eu altero a ordem da fila, para que o dealer seja o próximo jogador
     # passando o antigo dealer pro fim da fila
@@ -414,8 +454,8 @@ while not duplaVencedora: # loop de mãos
 
 os.system("clear")
 print("e a dupla vencedora foi...")
-time.sleep(1)
+time.sleep(1 / VELOCIDADE_DO_JOGO)
 print(duplaVencedora.nomeDaDupla)
 print(f"com {duplaVencedora.pontos} pontos!")
 
-time.sleep(10)
+time.sleep(10 / VELOCIDADE_DO_JOGO)
