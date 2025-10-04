@@ -77,17 +77,24 @@ class Mao:
             cartasString += carta.__str__() + " "
         return cartasString
     
-    def printaCartasEOpcoes(self):
-        print(self.__str__() + "[truco]")
+    def printaCartasEOpcoes(self, podeTrucar = True):
+        if podeTrucar:
+            print(self.__str__() + "[truco]")
+        else:
+            print(self.__str__())
+            
         mensagemOpcoes = ""
         opcoes = []
         for i in range (1, len(self.cartas)+1):
             opcao           = i
             mensagemOpcoes += f" {opcao}   "
             opcoes.append(opcao)
-        opcao = 4
-        mensagemOpcoes += f"   {opcao}"
-        opcoes.append(opcao)
+
+        if podeTrucar:
+            opcao = 4
+            mensagemOpcoes += f"   {opcao}"
+            opcoes.append(opcao)
+
         print(mensagemOpcoes)
         return opcoes
 
@@ -118,6 +125,18 @@ class Dupla:
         return duplaString
         
 
+def buscaProximoJogadorDaFila(jogadorAtual, filaDeJogadores):
+    quantidadeJogadores = len(filaDeJogadores)
+    i                   = 0
+    for jogador in filaDeJogadores:
+        if jogador.nome == jogadorAtual.nome:  
+            posicaoJogadorAtual = i
+            if posicaoJogadorAtual == (quantidadeJogadores - 1):
+                proximoJogador = filaDeJogadores[0]
+            else: 
+                proximoJogador = filaDeJogadores[posicaoJogadorAtual + 1]
+        i += 1
+    return proximoJogador
 
 
 ### Inicia programa
@@ -160,14 +179,18 @@ numeroDaMao    = 1
 duplaVencedora = 0
 
 while not duplaVencedora: # loop de mãos
+    valorDaRodada = 2 # valor padrão, reseto a cada mão
+    
     # loop de rodadas
     numeroDaRodada = 1
     while numeroDaRodada <= 3: 
         os.system("clear")
         print(duplas[0])
         print(duplas[1])
-        valorDaRodada = 2 # valor padrão
+
         jogadorDaVez  = filaDeJogadores[i]
+        correuDoTruco = False
+        rodadaTrucada = False
 
         print(f"mao {numeroDaMao}")
         print(f"rodada {numeroDaRodada}\n")
@@ -178,10 +201,17 @@ while not duplaVencedora: # loop de mãos
 
         print("\n" + jogadorDaVez.nome)
         
+        # para que o jogador não consiga trucar 2 vezes na mesma hora
+        # if rodadaTrucada:
+        #     podeTrucar = False
+        # else: 
+        #     podeTrucar = True
+        podeTrucar = True
+
         opcaoErrada = True # só pra entrar no while. é gambiarra... eu sei
         while opcaoErrada:
             opcaoErrada = False
-            opcoes      = jogadorDaVez.mao.printaCartasEOpcoes()
+            opcoes      = jogadorDaVez.mao.printaCartasEOpcoes(podeTrucar)
             escolha     = input("qual carta vai jogar? ").strip()
             if escolha == "": 
                 escolha = 0
@@ -195,8 +225,35 @@ while not duplaVencedora: # loop de mãos
                 continue
 
             if escolha == 4: # truco ladrao
-                # regra do truco aqui
-                a = 1 # só pq o python reclama se o if estiver vazio
+                respostaTruco  = 0
+                quemPediuTruco = jogadorDaVez
+
+                while (respostaTruco != "1") and (respostaTruco != "2"):
+                    proximoJogador = buscaProximoJogadorDaFila(quemPediuTruco, filaDeJogadores)
+                    
+                    print(f"\n\n{quemPediuTruco.nome} pediu truco ({valorDaRodada + 2} pontos)!")
+                    print(f"\n{proximoJogador.nome}, você aceita?")
+                    print(f"[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
+                    print(f"  1     2        3")
+                    respostaTruco = input("Opção: ")
+
+                    if respostaTruco == "1":
+                        rodadaTrucada  = True
+                        valorDaRodada += 2
+                        print(f"{proximoJogador.nome} aceitou! A rodada agora vale {valorDaRodada} pontos!")
+
+                    elif respostaTruco == "2":
+                        correuDoTruco = True
+                        vencedorTruco = quemPediuTruco
+                        print(f"{proximoJogador.nome} correu... A dupla de {quemPediuTruco.nome} ganhou {valorDaRodada} pontos!")
+
+                    elif respostaTruco == "3":
+                        valorDaRodada += 2
+                        quemPediuTruco = proximoJogador
+
+                    else: 
+                        print("Opção inválida... Tente novamente")
+
             else: 
                 cartaJogada = jogadorDaVez.mao.removeDaMao(escolha-1)
                 cartasDaRodada.append({
@@ -204,30 +261,40 @@ while not duplaVencedora: # loop de mãos
                     "carta":   cartaJogada
                 })
 
-        i += 1
-        if i == len(filaDeJogadores): # todos já jogaram, rodada acabou
+        # se for trucada, preciso passar pelo mesmo jogador de novo pra ele jogar, então não incremento
+        if not rodadaTrucada: 
+            i += 1
+
+        # todos já jogaram ou alguém correu do truco, rodada acabou
+        if (i == len(filaDeJogadores)) or correuDoTruco: 
             os.system("clear")
             # cálculos pra definir a dupla vencedora
 
-            # iniciamos com a primeira e vamos comparar com as outras
-            cartaMaisForte = cartasDaRodada[0]
-            for cadaCarta in cartasDaRodada:
-                if cadaCarta["carta"].peso >= cartaMaisForte["carta"].peso:
-                    cartaMaisForte = cadaCarta
+            if not correuDoTruco:
+                # iniciamos com a primeira e vamos comparar com as outras
+                cartaMaisForte = cartasDaRodada[0]
+                for cadaCarta in cartasDaRodada:
+                    if cadaCarta["carta"].peso >= cartaMaisForte["carta"].peso:
+                        cartaMaisForte = cadaCarta
 
-            vencedorRodada = cartaMaisForte["jogador"]
+            else:
+                cartaMaisForte = {
+                    "jogador": vencedorTruco,
+                    "carta":   "a outra dupla correu do truco..."
+                }
 
             # procuro a dupla do jogador vencedor
             for dupla in duplas:
                 for jogador in dupla.jogadores:
-                    if jogador.nome == vencedorRodada.nome:
+                    if jogador.nome == cartaMaisForte["jogador"].nome:
                         # incrementando as vitorias na mão
                         dupla.rodadas += 1
+
 
             print("\n\ne quem levou a rodada foi...")
             print(cartaMaisForte["jogador"].nome)
             print(cartaMaisForte["carta"])
-            time.sleep(1)
+            time.sleep(2)
 
             # resetando os contadores
             for cartaJogada in cartasDaRodada:
