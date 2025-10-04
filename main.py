@@ -77,7 +77,24 @@ class Mao:
             cartasString += carta.__str__() + " "
         return cartasString
     
-    def printaCartasEOpcoes(self, podeTrucar = True):
+    def printaCartas(self, podeTrucar):
+        if podeTrucar:
+            print(self.__str__() + "[truco]")
+        else:
+            print(self.__str__())
+            
+        opcoes = []
+        for i in range (1, len(self.cartas)+1):
+            opcao = i
+            opcoes.append(opcao)
+
+        if podeTrucar:
+            opcao = 4
+            opcoes.append(opcao)
+
+        return opcoes
+    
+    def printaCartasEOpcoes(self, podeTrucar):
         if podeTrucar:
             print(self.__str__() + "[truco]")
         else:
@@ -103,13 +120,44 @@ class Mao:
 
 
 class Jogador:
-    def __init__(self, nome, mao, npc):
-        self.nome = nome
-        self.mao  = mao
-        self.npc  = npc
+    def __init__(self, nome, mao, npc, podeTrucar):
+        self.nome       = nome
+        self.mao        = mao
+        self.npc        = npc
+        self.podeTrucar = podeTrucar
 
     def __str__(self):
         return f"{self.nome}: " + self.mao.__str__() + "\n"
+
+    # aqui faço a lógica de qual carta jogar
+    def decideQualCartaJogar(self):
+        # por enquanto, só jogo a mais forte
+        maiorCartaDaMao   = Carta("4", Naipe("ouros", "\U00002666"), 1)
+        i                 = 0
+        posicaoMaiorCarta = i
+        for carta in self.mao.cartas:
+            i += 1
+            if carta.peso >= maiorCartaDaMao.peso:
+                maiorCartaDaMao   = carta
+                posicaoMaiorCarta = i
+        return posicaoMaiorCarta
+    
+    # aqui é a decisão de aceitar ou não o truco
+    def decideSeAceitaTruco(self, valorDaRodada):
+        # por enquanto, aceito o truco se minha maior carta tiver peso maior ou igual a 9
+        # e truco por cima se o peso for maior ou igual a 11, ou seja, se tiver manilha
+        maiorCartaDaMao = Carta("4", Naipe("ouros", "\U00002666"), 1)
+        
+        for carta in self.mao.cartas:
+            if carta.peso >= maiorCartaDaMao.peso:
+                maiorCartaDaMao = carta
+
+        if maiorCartaDaMao.peso >= 11:
+            return 3 # truco por cima
+        elif maiorCartaDaMao.peso >= 9:
+            return 1 # aceito o truco
+        else:
+            return 2 # corro
 
 
 class Dupla:
@@ -151,10 +199,11 @@ baralho = Baralho(naipes)
 baralho.criaBaralho()
 
 jogadores = [
-    Jogador("gore", baralho.sorteaUmaMao(), False),
-    Jogador("luan", baralho.sorteaUmaMao(), False),
-    Jogador("joao", baralho.sorteaUmaMao(), True),
-    Jogador("bern", baralho.sorteaUmaMao(), True),
+    #        nome       mao do jogador      npc?   podeTrucar?
+    Jogador("gore", baralho.sorteaUmaMao(), False, True),
+    Jogador("luan", baralho.sorteaUmaMao(), False, True),
+    Jogador("joao", baralho.sorteaUmaMao(), True,  True),
+    Jogador("bern", baralho.sorteaUmaMao(), True,  True),
 ]
 
 duplas = [
@@ -193,8 +242,9 @@ while not duplaVencedora: # loop de mãos
         correuDoTruco = False
         rodadaTrucada = False
 
-        print(f"mao {numeroDaMao}")
-        print(f"rodada {numeroDaRodada}\n")
+        print(f"mao: {numeroDaMao}")
+        print(f"rodada: {numeroDaRodada}")
+        print(f"valor da rodada: {valorDaRodada}\n")
 
         if len(cartasDaRodada) > 0:
             for carta in cartasDaRodada:
@@ -203,24 +253,22 @@ while not duplaVencedora: # loop de mãos
         print("\n" + jogadorDaVez.nome)
         
         # para que o jogador não consiga trucar 2 vezes na mesma hora
-        # if rodadaTrucada:
-        #     podeTrucar = False
-        # else: 
-        #     podeTrucar = True
-        podeTrucar = True
+        if rodadaTrucada:
+            podeTrucar = False
+        else: 
+            podeTrucar = True
 
         opcaoErrada = True # só pra entrar no while. é gambiarra... eu sei
         while opcaoErrada:
             opcaoErrada = False
-            opcoes      = jogadorDaVez.mao.printaCartasEOpcoes(podeTrucar)
             
             if jogadorDaVez.npc:
+                opcoes = jogadorDaVez.mao.printaCartas(jogadorDaVez.podeTrucar)
                 print("decidindo qual carta jogar... [computador]")
-                # aqui faço a lógica de decisão do npc
+                escolha = jogadorDaVez.decideQualCartaJogar()
                 time.sleep(2)
-                escolha = 1
-                
             else:
+                opcoes  = jogadorDaVez.mao.printaCartasEOpcoes(jogadorDaVez.podeTrucar)
                 escolha = input("qual carta vai jogar? ").strip()
                 if escolha == "": 
                     escolha = 0
@@ -233,40 +281,45 @@ while not duplaVencedora: # loop de mãos
                 print(f"\nops... você tem as seguintes opções: ")
                 continue
 
-            if escolha == 4: # truco ladrao
-                respostaTruco  = 0
-                quemPediuTruco = jogadorDaVez
+            elif escolha == 4: # truco ladrao
+                respostaTruco             = 0
+                quemPediuTruco            = jogadorDaVez
+                quemPediuTruco.podeTrucar = False # esse jogador não pode trucar de novo nessa mão
 
-                while (respostaTruco != "1") and (respostaTruco != "2"):
+                while (respostaTruco != 1) and (respostaTruco != 2):
                     proximoJogador = buscaProximoJogadorDaFila(quemPediuTruco, filaDeJogadores)
                     
                     print(f"\n\n{quemPediuTruco.nome} pediu truco ({valorDaRodada + 2} pontos)!")
-                    print(f"\n{proximoJogador.nome}, você aceita?")
-                    print(f"[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
-                    print(f"  1     2        3")
 
-                    if jogadorDaVez.npc:
-                        respostaTruco = input("Opção: ")
-                    else:
-                        print("decidindo se aceito ou não... [computador]")
-                        # aqui faço a lógica de decisão do npc
+                    if proximoJogador.npc:
+                        print(f"{proximoJogador.nome} está decidindo se aceita ou não... [computador]")
+                        respostaTruco = proximoJogador.decideSeAceitaTruco(valorDaRodada + 2 + 2)
                         time.sleep(2)
-                        respostaTruco = "1"
+                    else:
+                        print(f"\n{proximoJogador.nome}, você aceita?")
+                        print(f"[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
+                        print(f"  1     2        3")
+                        respostaTruco = input("Opção: ")
 
+                    respostaTruco = int(respostaTruco)
 
-                    if respostaTruco == "1":
+                    if respostaTruco == 1:
                         rodadaTrucada  = True
                         valorDaRodada += 2
                         print(f"{proximoJogador.nome} aceitou! A rodada agora vale {valorDaRodada} pontos!")
+                        time.sleep(2)
 
-                    elif respostaTruco == "2":
+                    elif respostaTruco == 2:
                         correuDoTruco = True
                         vencedorTruco = quemPediuTruco
                         print(f"{proximoJogador.nome} correu... A dupla de {quemPediuTruco.nome} ganhou {valorDaRodada} pontos!")
+                        time.sleep(2)
 
-                    elif respostaTruco == "3":
+                    elif respostaTruco == 3:
                         valorDaRodada += 2
                         quemPediuTruco = proximoJogador
+                        print(f"\n{quemPediuTruco.nome} aumentou!")
+                        time.sleep(2)
 
                     else: 
                         print("Opção inválida... Tente novamente")
@@ -295,6 +348,8 @@ while not duplaVencedora: # loop de mãos
                         cartaMaisForte = cadaCarta
 
             else:
+                # se correu do truco, a mão é finalizada
+                numeroDaRodada = 4 # para finalizar o look da mão
                 cartaMaisForte = {
                     "jogador": vencedorTruco,
                     "carta":   "a outra dupla correu do truco..."
@@ -311,7 +366,7 @@ while not duplaVencedora: # loop de mãos
             print("\n\ne quem levou a rodada foi...")
             print(cartaMaisForte["jogador"].nome)
             print(cartaMaisForte["carta"])
-            time.sleep(2)
+            time.sleep(3)
 
             # resetando os contadores
             for cartaJogada in cartasDaRodada:
@@ -348,8 +403,10 @@ while not duplaVencedora: # loop de mãos
         print("\n\nembaralhando e distribuindo as cartas...")
         baralho.criaBaralho()
         for jogador in filaDeJogadores:
-            jogador.mao = baralho.sorteaUmaMao()
+            jogador.mao        = baralho.sorteaUmaMao()
+            jogador.podeTrucar = True
         time.sleep(3)
+
 
 os.system("clear")
 print("e a dupla vencedora foi...")
