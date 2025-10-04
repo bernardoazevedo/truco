@@ -7,8 +7,7 @@ from operator import attrgetter
 #                                          Constantes                                        
 # ------------------------------------------------------------------------------------------------
 VELOCIDADE_DO_JOGO = 2
-DIFICULDADE        = 0.5 # 0 a 1
-CORAGEM            = 1 # 0 a 1
+CORAGEM            = 1
 
 
 # ------------------------------------------------------------------------------------------------
@@ -157,12 +156,12 @@ class Mao:
 
 
 class Jogador:
-    def __init__(self, nome, mao, npc, podeTrucar, cartasDescobertas):
+    def __init__(self, nome, mao, npc):
         self.nome              = nome
         self.mao               = mao
         self.npc               = npc
-        self.podeTrucar        = podeTrucar
-        self.cartasDescobertas = cartasDescobertas # cartas que o jogador já viu na mesa
+        self.podeTrucar        = True
+        self.cartasDescobertas = [] # cartas que o jogador já viu na mesa
         self.adicionaArrayCartasDescobertas(mao.cartas) # já conheço as cartas da mão inicial
 
     def __str__(self):
@@ -243,9 +242,9 @@ class Dupla:
         self.nomeDaDupla = f"{jogadores[0].nome} e {jogadores[1].nome}" 
 
     def __str__(self):
-        duplaString  = "dupla: "   + self.nomeDaDupla  + "\n"
-        duplaString += "pontos: "  + str(self.pontos)  + "\n"
-        duplaString += "rodadas: " + str(self.rodadas) + "\n"
+        duplaString  = "Dupla: "   + self.nomeDaDupla  + "\n"
+        duplaString += "Pontos: "  + str(self.pontos)  + "\n"
+        duplaString += "Rodadas: " + str(self.rodadas) + "\n"
         return duplaString
         
 
@@ -276,26 +275,38 @@ def adicionaCartaDescobertaAosOutrosJogadores(carta, jogadores, quemJogou):
 # ------------------------------------------------------------------------------------------------
 #                                          Iniciando o programa                                        
 # ------------------------------------------------------------------------------------------------
+os.system("clear")
 baralho = Baralho()
 
-jogadores = [
-    #        nome       mao do jogador      npc?  podeTrucar?
-    Jogador("gore", baralho.sorteaUmaMao(), True, True, []),
-    Jogador("luan", baralho.sorteaUmaMao(), True, True, []),
-    Jogador("joao", baralho.sorteaUmaMao(), True, True, []),
-    Jogador("bern", baralho.sorteaUmaMao(), False, True, []),
-]
+print("---------------- SEJA BEM-VINDO AO TRUCO! ----------------\n")
+quantidadeDuplas = int(input("Quantas duplas vão jogar? "))
 
-duplas = [
-    Dupla([jogadores[0], jogadores[2]], 0, 0),
-    Dupla([jogadores[1], jogadores[3]], 0, 0)
-]
+if quantidadeDuplas < 2:
+    print("Ops... O truco deve ser jogado com pelo menos 2 duplas")
+    exit()
 
+duplas          = []
 filaDeJogadores = []
-filaDeJogadores.append(duplas[0].jogadores[0])
-filaDeJogadores.append(duplas[1].jogadores[0])
-filaDeJogadores.append(duplas[0].jogadores[1])
-filaDeJogadores.append(duplas[1].jogadores[1])
+for indexDupla in range(0, quantidadeDuplas):
+    dupla = []
+    print(f"\n\n---> Dupla {indexDupla + 1}")
+    for indexJogadorDupla in range(0, 2):
+        nome = input("\nNome: ")
+        npc  = input("Será um jogador real (sim/nao): ")
+        if npc == "sim":
+            npc = False
+        else:
+            npc = True
+        dupla.append(Jogador(nome, baralho.sorteaUmaMao(), npc))
+    
+    # coloco os jogadores em uma dupla
+    duplas.append(Dupla([dupla[0], dupla[1]], 0, 0))
+
+# coloco os jogadores na fila, de forma que as duplas fiquem alternadas
+for cadaDupla in duplas:
+    filaDeJogadores.append(cadaDupla.jogadores[0])
+for cadaDupla in duplas:
+    filaDeJogadores.append(cadaDupla.jogadores[1])
 
 
 # loop para cada partida, roda pela ordem dos jogadores
@@ -322,9 +333,9 @@ while not duplaVencedora: # loop de mãos
         correuDoTruco = False
         rodadaTrucada = False
 
-        print(f"mao: {numeroDaMao}")
-        print(f"rodada: {numeroDaRodada}")
-        print(f"valor da rodada: {valorDaRodada}\n")
+        print(f"Mão: {numeroDaMao}")
+        print(f"Rodada: {numeroDaRodada}")
+        print(f"Valor da rodada: {valorDaRodada}\n")
 
         if len(cartasDaRodada) > 0:
             for carta in cartasDaRodada:
@@ -344,12 +355,12 @@ while not duplaVencedora: # loop de mãos
             
             if jogadorDaVez.npc:
                 opcoes = jogadorDaVez.mao.printaCartas(jogadorDaVez.podeTrucar)
-                print("decidindo qual carta jogar... [computador]")
+                print("Decidindo qual carta jogar... [computador]")
                 escolha = jogadorDaVez.decideQualCartaJogar()
                 time.sleep(2 / VELOCIDADE_DO_JOGO)
             else:
                 opcoes  = jogadorDaVez.mao.printaCartasEOpcoes(jogadorDaVez.podeTrucar)
-                escolha = input("qual carta vai jogar? ").strip()
+                escolha = input("Qual carta vai jogar? ").strip()
                 if escolha == "": 
                     escolha = 0
                 else:
@@ -358,7 +369,7 @@ while not duplaVencedora: # loop de mãos
             # verifica se a resposta é válida
             if escolha not in opcoes:
                 opcaoErrada = True
-                print(f"\nops... você tem as seguintes opções: ")
+                print(f"\nOps... você tem as seguintes opções: ")
                 continue
 
             elif escolha == 4: # truco ladrao
@@ -434,7 +445,7 @@ while not duplaVencedora: # loop de mãos
                 numeroDaRodada = 4 # para finalizar o look da mão
                 cartaMaisForte = {
                     "jogador": vencedorTruco,
-                    "carta":   "a outra dupla correu do truco..."
+                    "carta":   "A outra dupla correu do truco..."
                 }
 
             # procuro a dupla do jogador vencedor
@@ -445,9 +456,9 @@ while not duplaVencedora: # loop de mãos
                         dupla.rodadas += 1
 
 
-            print("\n\ne quem levou a rodada foi...")
+            print("\n\nE quem levou a rodada foi...")
             print(cartaMaisForte["jogador"].nome)
-            print(cartaMaisForte["carta"])
+            print(f"Com a carta: {cartaMaisForte["carta"]}")
             time.sleep(3 / VELOCIDADE_DO_JOGO)
 
             # resetando os contadores
@@ -468,7 +479,7 @@ while not duplaVencedora: # loop de mãos
             duplaVencedoraMao = dupla
 
     duplaVencedoraMao.pontos += valorDaRodada
-    print("dupla vencedora da mao:")
+    print("Dupla vencedora dessa mão:")
     print(duplaVencedoraMao)
 
     # resetando contador de rodadas
@@ -482,7 +493,7 @@ while not duplaVencedora: # loop de mãos
     
     if not duplaVencedora:
         # embaralhando e distribuindo as cartas 
-        print("\n\nembaralhando e distribuindo as cartas...")
+        print("\n\nEmbaralhando e distribuindo as cartas...")
         baralho.criaBaralho()
         for jogador in filaDeJogadores:
             jogador.podeTrucar        = True
@@ -497,9 +508,9 @@ while not duplaVencedora: # loop de mãos
     filaDeJogadores.append(antigoDealer)
 
 os.system("clear")
-print("e a dupla vencedora foi...")
+print("E a dupla vencedora foi...")
 time.sleep(1 / VELOCIDADE_DO_JOGO)
 print(duplaVencedora.nomeDaDupla)
-print(f"com {duplaVencedora.pontos} pontos!")
+print(f"Com {duplaVencedora.pontos} pontos!")
 
 time.sleep(10 / VELOCIDADE_DO_JOGO)
