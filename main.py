@@ -8,7 +8,7 @@ from operator import attrgetter
 # ------------------------------------------------------------------------------------------------
 VELOCIDADE_DO_JOGO = 2
 DIFICULDADE        = 0.5 # 0 a 1
-CORAGEM            = 0.5 # 0 a 1
+CORAGEM            = 1 # 0 a 1
 
 
 # ------------------------------------------------------------------------------------------------
@@ -179,6 +179,11 @@ class Jogador:
             if carta.peso >= maiorCartaDaMao.peso:
                 maiorCartaDaMao   = carta
                 posicaoMaiorCarta = i
+
+        porcentagemCartasMaiores = self.porcentagemDeCartasMaiores(maiorCartaDaMao)
+        if porcentagemCartasMaiores < (5 * CORAGEM) and self.podeTrucar:
+            return 4 # tô forte, vou trucar
+
         return posicaoMaiorCarta
     
 
@@ -193,9 +198,9 @@ class Jogador:
         porcentagemCartasMaiores = self.porcentagemDeCartasMaiores(maiorCartaDaMao)
 
         # quanto menor a porcentagem, melhor
-        if porcentagemCartasMaiores < 5:
+        if porcentagemCartasMaiores < (5 * CORAGEM):
             return 3 # truco por cima
-        elif porcentagemCartasMaiores < 10:
+        elif porcentagemCartasMaiores < (10 * CORAGEM):
             return 1 # aceito o truco
         else:
             return 2 # corro
@@ -372,7 +377,8 @@ while not duplaVencedora: # loop de mãos
                         time.sleep(2 / VELOCIDADE_DO_JOGO)
                     else:
                         print(f"\n{proximoJogador.nome}, você aceita?")
-                        print(f"[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
+                        jogadorDaVez.mao.printaCartas(False)
+                        print(f"\n[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
                         print(f"  1     2        3")
                         respostaTruco = input("Opção: ")
 
