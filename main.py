@@ -407,6 +407,10 @@ while not duplaVencedora: # loop de mãos
             jogador.podeTrucar = True
         time.sleep(3)
 
+    # aqui eu altero a ordem da fila, para que o dealer seja o próximo jogador
+    # passando o antigo dealer pro fim da fila
+    antigoDealer = filaDeJogadores.pop(0)
+    filaDeJogadores.append(antigoDealer)
 
 os.system("clear")
 print("e a dupla vencedora foi...")
