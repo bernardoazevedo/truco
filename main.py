@@ -1,15 +1,23 @@
 import random
 import os
 import time
-import numpy as np
+from operator import attrgetter
 
-VELOCIDADE_DO_JOGO = 1
+# ------------------------------------------------------------------------------------------------
+#                                          Constantes                                        
+# ------------------------------------------------------------------------------------------------
+VELOCIDADE_DO_JOGO = 2
+DIFICULDADE        = 0.5 # 0 a 1
+CORAGEM            = 0.5 # 0 a 1
 
+
+# ------------------------------------------------------------------------------------------------
+#                                          Classes                                        
+# ------------------------------------------------------------------------------------------------
 class Naipe:
     def __init__(self, nome, simbolo):
         self.nome    = nome
         self.simbolo = simbolo
-
 
 class Carta:
     def __init__(self, numero, naipe, peso):
@@ -20,50 +28,55 @@ class Carta:
     def __str__(self):
         return f"[{self.numero}{self.naipe.simbolo}]"
 
-class CartaSoftmax:
-    def __init__(self, carta, pesoSoftmax):
-        self.carta       = carta
-        self.pesoSoftmax = pesoSoftmax
-    
-    def __str__(self):
-        return f"{self.carta.__str__()} = {self.pesoSoftmax}"
-
 class Baralho:
-    cartas = []
+    def __init__(self):
+        self.cartas = []
+        self.naipes = {
+            Naipe("copas",   "\U00002665"),
+            Naipe("ouros",   "\U00002666"),
+            Naipe("espadas", "\U00002660"),
+            Naipe("paus",    "\U00002663")
+        }
+        self.criaBaralho()
 
-    def __init__(self, naipes):
-        self.naipes = naipes
+    def __str__(self):
+        cartasOrdenadas = sorted(self.cartas, key=attrgetter('peso'))
+        baralhoString   = ""
+        for carta in cartasOrdenadas:
+            # baralhoString += carta.__str__() + " "
+            baralhoString += f"{carta.__str__()} -> {carta.peso}\n"
+        return baralhoString
 
     def criaBaralho(self):
         # criando o baralho
         for naipe in self.naipes:
 
             if naipe.nome == "paus": # zap
-                self.cartas.append(Carta("4", naipe, 14))
+                self.adicionaCarta(Carta("4", naipe, 14))
             else:
-                self.cartas.append(Carta("4", naipe, 1))
+                self.adicionaCarta(Carta("4", naipe, 1))
 
-            self.cartas.append(Carta("5", naipe, 2))
-            self.cartas.append(Carta("6", naipe, 3))
+            self.adicionaCarta(Carta("5", naipe, 2))
+            self.adicionaCarta(Carta("6", naipe, 3))
 
             if naipe.nome == "copas": # setão
-                self.cartas.append(Carta("7", naipe, 13))
+                self.adicionaCarta(Carta("7", naipe, 13))
             elif naipe.nome == "ouros": # mole
-                self.cartas.append(Carta("7", naipe, 11))
+                self.adicionaCarta(Carta("7", naipe, 11))
             else:
-                self.cartas.append(Carta("7", naipe, 4))
+                self.adicionaCarta(Carta("7", naipe, 4))
 
-            self.cartas.append(Carta("Q", naipe, 5))
-            self.cartas.append(Carta("J", naipe, 6))
-            self.cartas.append(Carta("K", naipe, 7))
+            self.adicionaCarta(Carta("Q", naipe, 5))
+            self.adicionaCarta(Carta("J", naipe, 6))
+            self.adicionaCarta(Carta("K", naipe, 7))
 
             if naipe.nome == "espadas": # espadilha
-                self.cartas.append(Carta("A", naipe, 12))
+                self.adicionaCarta(Carta("A", naipe, 12))
             else:
-                self.cartas.append(Carta("A", naipe, 8))
+                self.adicionaCarta(Carta("A", naipe, 8))
 
-                self.cartas.append(Carta("2", naipe, 9))
-                self.cartas.append(Carta("3", naipe, 10))
+            self.adicionaCarta(Carta("2", naipe, 9))
+            self.adicionaCarta(Carta("3", naipe, 10))
 
     def sorteaCartaTiraDoBaralho(self):
         cartaSorteada = random.choice(self.cartas)
@@ -75,6 +88,20 @@ class Baralho:
         for i in range (0,3):
             cartas.append(self.sorteaCartaTiraDoBaralho())
         return Mao(cartas)
+    
+    def removeCartaDoBaralho(self, cartaParaRemover):
+        for cartaBaralho in self.cartas:
+            if (cartaBaralho.numero == cartaParaRemover.numero) and (cartaBaralho.naipe.nome == cartaParaRemover.naipe.nome):
+                self.cartas.remove(cartaBaralho)    
+
+    def removeCartasDoBaralho(self, cartasParaRemover):
+        for cartaParaRemover in cartasParaRemover:
+            self.removeCartaDoBaralho(cartaParaRemover)
+        # self.cartas = np.setdiff1d(self.cartas, cartas)
+
+    def adicionaCarta(self, carta):
+        self.cartas.append(carta)
+
 
 
 class Mao:
@@ -130,48 +157,77 @@ class Mao:
 
 
 class Jogador:
-    def __init__(self, nome, mao, npc, podeTrucar):
-        self.nome       = nome
-        self.mao        = mao
-        self.npc        = npc
-        self.podeTrucar = podeTrucar
+    def __init__(self, nome, mao, npc, podeTrucar, cartasDescobertas):
+        self.nome              = nome
+        self.mao               = mao
+        self.npc               = npc
+        self.podeTrucar        = podeTrucar
+        self.cartasDescobertas = cartasDescobertas # cartas que o jogador já viu na mesa
+        self.adicionaArrayCartasDescobertas(mao.cartas) # já conheço as cartas da mão inicial
 
     def __str__(self):
         return f"{self.nome}: " + self.mao.__str__() + "\n"
 
     # aqui faço a lógica de qual carta jogar
     def decideQualCartaJogar(self):
-        cartasSoftmax   = softmaxCartas(self.mao.cartas)
-        maiorCartaDaMao = CartaSoftmax(
-            Carta("4", Naipe("ouros", "\U00002666"), 1),
-            0 
-        )
-        i = 0
+        # por enquanto, só jogo a mais forte
+        maiorCartaDaMao   = Carta("4", Naipe("ouros", "\U00002666"), 1)
+        i                 = 0
         posicaoMaiorCarta = i
-        for cartaSoftmax in cartasSoftmax:
-            i += 1 # itero antes, pois as opções começam com 1
-            if cartaSoftmax.carta.peso >= maiorCartaDaMao.carta.peso:
-                maiorCartaDaMao   = cartaSoftmax
+        for carta in self.mao.cartas:
+            i += 1
+            if carta.peso >= maiorCartaDaMao.peso:
+                maiorCartaDaMao   = carta
                 posicaoMaiorCarta = i
         return posicaoMaiorCarta
     
 
     # aqui é a decisão de aceitar ou não o truco
-    def decideSeAceitaTruco(self, valorDaRodada):
-        # por enquanto, aceito o truco se minha maior carta tiver peso maior ou igual a 9
-        # e truco por cima se o peso for maior ou igual a 11, ou seja, se tiver manilha
+    def decideSeAceitaTruco(self):
         maiorCartaDaMao = Carta("4", Naipe("ouros", "\U00002666"), 1)
-        
         for carta in self.mao.cartas:
             if carta.peso >= maiorCartaDaMao.peso:
                 maiorCartaDaMao = carta
+        
+        # vamos calcular a porcentagem de cartas desconhecidas que são maiores que a minha mais forte
+        porcentagemCartasMaiores = self.porcentagemDeCartasMaiores(maiorCartaDaMao)
 
-        if maiorCartaDaMao.peso >= 11:
+        # quanto menor a porcentagem, melhor
+        if porcentagemCartasMaiores < 5:
             return 3 # truco por cima
-        elif maiorCartaDaMao.peso >= 9:
+        elif porcentagemCartasMaiores < 10:
             return 1 # aceito o truco
         else:
             return 2 # corro
+        
+    def adicionaCartaDescoberta(self, carta):
+        self.cartasDescobertas.append(carta)
+
+    def adicionaArrayCartasDescobertas(self, cartas):
+        self.cartasDescobertas += cartas
+
+    def printaCartasDescobertas(self):
+        textoCartas = ""
+        for carta in self.cartasDescobertas:
+            textoCartas += f" {carta.__str__()}"
+        print(f"cartasDescobertas: {textoCartas}")
+
+    def porcentagemDeCartasMaiores(self, carta):
+        # vou criar um novo baralho completo e remover as cartas que já conheço.
+        # dessa forma, tenho as cartas que ainda não conheço e posso calcular minha chance contra elas
+        baralhoCompleto = Baralho()
+        baralhoCompleto.removeCartasDoBaralho(self.cartasDescobertas)
+
+        cartasDesconhecidas           = baralhoCompleto.cartas
+        quantidadeCartasDesconhecidas = len(cartasDesconhecidas)
+        cartasMaioresQueAMinha        = 0
+
+        for cartaDesconhecida in cartasDesconhecidas:
+            if cartaDesconhecida.peso > carta.peso:
+                cartasMaioresQueAMinha += 1
+
+        porcentagemCartasMaiores = (cartasMaioresQueAMinha * 100) / quantidadeCartasDesconhecidas
+        return porcentagemCartasMaiores
 
 
 class Dupla:
@@ -188,6 +244,9 @@ class Dupla:
         return duplaString
         
 
+# ------------------------------------------------------------------------------------------------
+#                                          Funções gerais                                        
+# ------------------------------------------------------------------------------------------------
 def buscaProximoJogadorDaFila(jogadorAtual, filaDeJogadores):
     quantidadeJogadores = len(filaDeJogadores)
     i                   = 0
@@ -201,49 +260,25 @@ def buscaProximoJogadorDaFila(jogadorAtual, filaDeJogadores):
         i += 1
     return proximoJogador
 
-# recebe um array de cartas e retorna o array com o valor de cada uma
-def softmaxCartas(cartas):
-    
-    arrayPesos = []
-    # gerando um array somente com os pesos
-    for carta in cartas:
-        arrayPesos.append(carta.peso)
-
-    pesosSoftmax = softmax(arrayPesos)
-
-    # gerando um novo array com as cartas e seus valores calculados 
-    cartasSoftmax = []
-    i = 0
-    for carta in cartas:
-        cartasSoftmax.append(
-            CartaSoftmax(
-                carta,
-                pesosSoftmax[i]
-            )
-        )
-        i += 1
-    return cartasSoftmax
-
-def softmax(x):
-    return np.exp(x) / np.sum(np.exp(x), axis=0)
+def adicionaCartaDescobertaAosOutrosJogadores(carta, jogadores, quemJogou):
+    for jogador in jogadores:
+        if jogador.nome != quemJogou.nome:
+            jogador.adicionaCartaDescoberta(carta)
 
 
-### Inicia programa
-naipes = []
-naipes.append(Naipe("copas",   "\U00002665"))
-naipes.append(Naipe("ouros",   "\U00002666"))
-naipes.append(Naipe("espadas", "\U00002660"))
-naipes.append(Naipe("paus",    "\U00002663"))
 
-baralho = Baralho(naipes)
-baralho.criaBaralho()
+
+# ------------------------------------------------------------------------------------------------
+#                                          Iniciando o programa                                        
+# ------------------------------------------------------------------------------------------------
+baralho = Baralho()
 
 jogadores = [
-    #        nome       mao do jogador      npc?   podeTrucar?
-    Jogador("gore", baralho.sorteaUmaMao(), True, True),
-    Jogador("luan", baralho.sorteaUmaMao(), True, True),
-    Jogador("joao", baralho.sorteaUmaMao(), True,  True),
-    Jogador("bern", baralho.sorteaUmaMao(), True,  True),
+    #        nome       mao do jogador      npc?  podeTrucar?
+    Jogador("gore", baralho.sorteaUmaMao(), True, True, []),
+    Jogador("luan", baralho.sorteaUmaMao(), True, True, []),
+    Jogador("joao", baralho.sorteaUmaMao(), True, True, []),
+    Jogador("bern", baralho.sorteaUmaMao(), False, True, []),
 ]
 
 duplas = [
@@ -333,7 +368,7 @@ while not duplaVencedora: # loop de mãos
 
                     if proximoJogador.npc:
                         print(f"{proximoJogador.nome} está decidindo se aceita ou não... [computador]")
-                        respostaTruco = proximoJogador.decideSeAceitaTruco(valorDaRodada + 2 + 2)
+                        respostaTruco = proximoJogador.decideSeAceitaTruco()
                         time.sleep(2 / VELOCIDADE_DO_JOGO)
                     else:
                         print(f"\n{proximoJogador.nome}, você aceita?")
@@ -370,6 +405,7 @@ while not duplaVencedora: # loop de mãos
                     "jogador": jogadorDaVez,
                     "carta":   cartaJogada
                 })
+                adicionaCartaDescobertaAosOutrosJogadores(cartaJogada, filaDeJogadores, jogadorDaVez)
 
         # se for trucada, preciso passar pelo mesmo jogador de novo pra ele jogar, então não incremento
         if not rodadaTrucada: 
@@ -426,7 +462,7 @@ while not duplaVencedora: # loop de mãos
             duplaVencedoraMao = dupla
 
     duplaVencedoraMao.pontos += valorDaRodada
-    print("dupla vencedora:")
+    print("dupla vencedora da mao:")
     print(duplaVencedoraMao)
 
     # resetando contador de rodadas
@@ -443,9 +479,11 @@ while not duplaVencedora: # loop de mãos
         print("\n\nembaralhando e distribuindo as cartas...")
         baralho.criaBaralho()
         for jogador in filaDeJogadores:
-            jogador.mao        = baralho.sorteaUmaMao()
-            jogador.podeTrucar = True
-        time.sleep(3 / VELOCIDADE_DO_JOGO)
+            jogador.podeTrucar        = True
+            jogador.cartasDescobertas = []
+            jogador.mao               = baralho.sorteaUmaMao()
+            jogador.adicionaArrayCartasDescobertas(jogador.mao.cartas)
+        time.sleep(5 / VELOCIDADE_DO_JOGO)
 
     # aqui eu altero a ordem da fila, para que o dealer seja o próximo jogador
     # passando o antigo dealer pro fim da fila
