@@ -103,9 +103,10 @@ class Mao:
 
 
 class Jogador:
-    def __init__(self, nome, mao):
+    def __init__(self, nome, mao, npc):
         self.nome = nome
         self.mao  = mao
+        self.npc  = npc
 
     def __str__(self):
         return f"{self.nome}: " + self.mao.__str__() + "\n"
@@ -150,10 +151,10 @@ baralho = Baralho(naipes)
 baralho.criaBaralho()
 
 jogadores = [
-    Jogador("gore", baralho.sorteaUmaMao()),
-    Jogador("luan", baralho.sorteaUmaMao()),
-    Jogador("joao", baralho.sorteaUmaMao()),
-    Jogador("bern", baralho.sorteaUmaMao()),
+    Jogador("gore", baralho.sorteaUmaMao(), False),
+    Jogador("luan", baralho.sorteaUmaMao(), False),
+    Jogador("joao", baralho.sorteaUmaMao(), True),
+    Jogador("bern", baralho.sorteaUmaMao(), True),
 ]
 
 duplas = [
@@ -212,11 +213,19 @@ while not duplaVencedora: # loop de mãos
         while opcaoErrada:
             opcaoErrada = False
             opcoes      = jogadorDaVez.mao.printaCartasEOpcoes(podeTrucar)
-            escolha     = input("qual carta vai jogar? ").strip()
-            if escolha == "": 
-                escolha = 0
+            
+            if jogadorDaVez.npc:
+                print("decidindo qual carta jogar... [computador]")
+                # aqui faço a lógica de decisão do npc
+                time.sleep(2)
+                escolha = 1
+                
             else:
-                escolha = int(escolha)
+                escolha = input("qual carta vai jogar? ").strip()
+                if escolha == "": 
+                    escolha = 0
+                else:
+                    escolha = int(escolha)
 
             # verifica se a resposta é válida
             if escolha not in opcoes:
@@ -235,7 +244,15 @@ while not duplaVencedora: # loop de mãos
                     print(f"\n{proximoJogador.nome}, você aceita?")
                     print(f"[Sim] [Não] [Quero {valorDaRodada + 2 + 2}!]")
                     print(f"  1     2        3")
-                    respostaTruco = input("Opção: ")
+
+                    if jogadorDaVez.npc:
+                        respostaTruco = input("Opção: ")
+                    else:
+                        print("decidindo se aceito ou não... [computador]")
+                        # aqui faço a lógica de decisão do npc
+                        time.sleep(2)
+                        respostaTruco = "1"
+
 
                     if respostaTruco == "1":
                         rodadaTrucada  = True
