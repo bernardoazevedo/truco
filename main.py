@@ -25,7 +25,15 @@ class Carta:
         self.peso   = peso
 
     def __str__(self):
-        return f"[{self.numero}{self.naipe.simbolo}]"
+        coresPadrao = "\033[0m"
+        if self.naipe.nome == "copas" or self.naipe.nome == "ouros":
+            corTexto = "\033[0;31m" # vermelho
+            corFundo = "\033[47m" # branco
+            return f"{corTexto}{corFundo}[{self.numero}{self.naipe.simbolo}]{coresPadrao}"
+        else:
+            corTexto = "\033[30m" # preto
+            corFundo = "\033[47m" # branco
+            return f"{corTexto}{corFundo}[{self.numero}{self.naipe.simbolo}]{coresPadrao}"
 
 class Baralho:
     def __init__(self):
